@@ -12,7 +12,7 @@
 #define HEIGHTGAME 100
 #define toDegree(x) (x * 180.0 / 3.14159)
 #define toRadian(x) (x * 3.14159 / 180.0)
-#define gameFPS 120
+#define gameFPS 200
 #define getDecimal(x) (x - (int)x)
 #define sgn(x) (x < 0 ? -1 : 1)
 
@@ -24,7 +24,7 @@ const int maxWidth = screenWidth;
 const int maxHeight = screenHeight;
 const int minWidth = 0;
 const int minHeight = 0;
-const int cellResolution = 200; // This means 10x10 cells
+const int cellResolution = 250; // This means 10x10 cells
 
 const int size = (cellResolution + 2) * (cellResolution + 2);
 
@@ -179,9 +179,56 @@ void dens_step(int N, float *x, float *x0, float *u, float *v, float diff, float
     advect(N, 0, x, x0, u, v, dt);
 }
 
+/**
+ * This function returns the velocity on the grid, so given a point x, y coordinate form it will return the grid index of the respective velocities
+ */
+int getGridIndex(float x, float y)
+{
+    int xIndex = x / (screenWidth / cellResolution);
+    int yIndex = y / (screenHeight / cellResolution);
+
+    if (IX(xIndex, yIndex) >= size){
+        return 0; 
+    }
+
+    return IX(xIndex, yIndex);
+}
+
+void drawStreamLine(float x, float y, int n)
+{
+    float coordX = x;
+    float coordY = y;
+
+    for (int i = 0; i < n; i++)
+    {
+        int gridIndex = getGridIndex(coordX, coordY);
+        // Draw test line
+        float uVel = u[gridIndex];
+        float vVel = v[gridIndex];
+        float velMagnitude = sqrt(uVel * uVel + vVel * vVel);
+        if (velMagnitude == 0 || gridIndex == 0 || gridIndex >= size){
+            break;
+        }
+        
+        DrawLine(coordX, coordY, coordX + 9 * u[gridIndex] / velMagnitude, coordY + (v[gridIndex]) / velMagnitude * 9, WHITE);
+        coordX += 9 * uVel / velMagnitude;
+        coordY += 9 * vVel / velMagnitude;
+        
+        // Draw a circle
+        // DrawCircle(coordX, coordY, 1, BLACK);
+
+    }
+}
+
 // Main function
 int main()
 {
+
+    float shiftSigmoid = 248;
+    float multiplierSigmoid = 20;
+    float yMultiplierSigmoid = 255;
+    float minVel = 10000000;
+    float maxVel = 0;
 
     InitWindow(screenWidth, screenHeight, "Fluiduh");
     SetTargetFPS(gameFPS);
@@ -198,17 +245,26 @@ int main()
     float lastComputationTime = 0;
     float lastDrawTime = 0;
 
+    // Set all velocities to 0
+    for (int i = 0; i < size; i++)
+    {
+        u[i] = 0;
+        v[i] = 0;
+        u_prev[i] = 0;
+        v_prev[i] = 0;
+    }
+
     while (WindowShouldClose() == false)
     {
-
-        // Mouse zoom stuff
+        minVel = 10000000;
+        maxVel = 0;
+        // Camera movement
         if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
         {
             Vector2 delta = GetMouseDelta();
             delta = Vector2Scale(delta, -1.0f / cam.zoom);
             cam.target = Vector2Add(cam.target, delta);
         }
-
         float wheel = GetMouseWheelMove();
         if (wheel != 0)
         {
@@ -220,8 +276,7 @@ int main()
                 cam.zoom = 0.1f;
         }
 
-        // Add density to the density field where the mouse is
-
+        // Mouse human interaction
         Vector2 mousePos = GetMousePosition();
         Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, cam);
         int x = (int)mouseWorldPos.x;
@@ -233,7 +288,7 @@ int main()
             // Make sure its not out of bounds
             if (x >= 1 && x < cellResolution && y >= 1 && y < cellResolution)
             {
-                dens[IX(x, y)] = 500;
+                dens[IX(x, y)] = 15;
             }
             // dens_prev[IX(x, y)] = 255;
         }
@@ -252,19 +307,16 @@ int main()
                 if (x >= 1 && x < cellResolution && y >= 1 && y < cellResolution)
                 {
                     // Make velocity changedirection based on the mouse movement
-                    // GetMouseDelta 
+                    // GetMouseDelta
                     Vector2 mouseDelta = GetMouseDelta();
-                    u[IX(x, y)] = mouseDelta.x * 10;
-                    v[IX(x, y)] = mouseDelta.y* 10;
-
-        
-
+                    // u[IX(x, y)] = mouseDelta.x * 20;
+                    // v[IX(x, y)] = mouseDelta.y * 20;
                 }
             }
         }
 
         // Compute the velocity field
-        vel_step(cellResolution, u, v, u_prev, v_prev, 0.001, 0.001);
+        // vel_step(cellResolution, u, v, u_prev, v_prev, 0.001, 0.001);
         dens_step(cellResolution, dens, dens_prev, u, v, 0.01, 0.001);
         // Dissipate the density field
         for (int i = 0; i < cellResolution; i++)
@@ -282,6 +334,16 @@ int main()
         ClearBackground(BLACK);
         BeginMode2D(cam);
 
+        // Find minimum density
+        float minDensity = 100000000;
+        for (int i = 0; i < cellResolution; i++)
+        {
+            for (int j = 0; j < cellResolution; j++)
+            {
+                minDensity = min(minDensity, dens[IX(i, j)]);
+            }
+        }
+
         // Draw the density field
         for (int i = 0; i < cellResolution; i++)
         {
@@ -296,11 +358,10 @@ int main()
                 if (density > 0)
                 {
                     // Make it based on the density for transparency and the velocity for color
-                    Color color = ColorFromHSV((abs(u[IX(i, j)]) + abs(v[IX(i, j)])) / 2, 255, 255);
-
+                    Color color = ColorFromHSV((abs(u[IX(i, j)]) + abs(v[IX(i, j)])) / 2, 255, 100);
                     // Add transparency based on the density
-                    color.a = density;
-                    color.r = 255;
+                    color.a = (density - minDensity) * 50;
+
                     color.g = 255;
                     color.b = 255;
 
@@ -309,7 +370,18 @@ int main()
             }
         }
 
-        // Draw the velocity field
+        // Draw the streamlines, 100 rays for the entire scren
+        // for (int i = 0; i < 30; i++)
+        // {
+        //     float x = i * (screenWidth / 30);
+        //     for (int j = 0; j < 30; j++)
+        //     {
+        //         float y = j * (screenHeight / 30);
+        //         drawStreamLine(x, y, 15);
+        //     }
+        // }
+    
+        // // Draw the velocity field
         // for (int i = 0; i < cellResolution; i++)
         // {
         //     for (int j = 0; j < cellResolution; j++)
@@ -319,10 +391,24 @@ int main()
         //         float y = j * (screenHeight / cellResolution) + (screenHeight / cellResolution) / 2;
         //         float uVel = u[IX(i, j)];
         //         float vVel = v[IX(i, j)];
-        //         DrawLine(x, y, x + uVel * 10, y + vVel * 10, Color{255, 255, 255, 255});
-
+        //         float velMagnitude = sqrt(uVel * uVel + vVel * vVel);
+        //         minVel = min(minVel, velMagnitude);
+        //         maxVel = max(maxVel, velMagnitude);
+        //         float sigmoided = yMultiplierSigmoid / (1 + exp(-(velMagnitude - shiftSigmoid) / multiplierSigmoid));
+        //         // Scale both down if greater than 10
+        //         if (velMagnitude > 5)
+        //         {
+        //             uVel /= velMagnitude / 5;
+        //             vVel /= velMagnitude / 5;
+        //         }
+        //         Color color = ColorFromHSV((sigmoided), 255, 150);
+        //         // Draw the veolcity as a square
+        //         // DrawRectangle(x, y, 10, 10, color);
+        //         drawStreamLine(x, y, 10); 
+        //         // DrawLine(x, y, x + 4 * uVel / velMagnitude, y + (vVel) / velMagnitude * 4, ColorFromHSV((sigmoided), 255, 150));
         //     }
         // }
+
 
         EndMode2D();
         // End drawing
@@ -332,9 +418,42 @@ int main()
 
         // Write image to video memory
 
-
         // Display the FPS currently
         DrawFPS(10, 10);
+
+        // Check keys h, j, k, l to chage the sigmoid variables
+        if (IsKeyDown(KEY_H))
+        {
+            shiftSigmoid -= 0.1;
+        }
+        if (IsKeyDown(KEY_J))
+        {
+            shiftSigmoid += 0.1;
+        }
+        if (IsKeyDown(KEY_K))
+        {
+            multiplierSigmoid -= 0.1;
+        }
+        if (IsKeyDown(KEY_L))
+        {
+            multiplierSigmoid += 0.1;
+        }
+        if (IsKeyDown(KEY_U))
+        {
+            yMultiplierSigmoid -= 0.1;
+        }
+        if (IsKeyDown(KEY_I))
+        {
+            yMultiplierSigmoid += 0.1;
+        }
+
+        // Draw sigmoid variables
+        DrawText(("Shift: " + to_string(shiftSigmoid)).c_str(), 10, 30, 20, WHITE);
+        DrawText(("Multiplier: " + to_string(multiplierSigmoid)).c_str(), 10, 50, 20, WHITE);
+        DrawText(("Y Multiplier: " + to_string(yMultiplierSigmoid)).c_str(), 10, 70, 20, WHITE);
+        DrawText(("Min Vel: " + to_string(minVel)).c_str(), 10, 90, 20, WHITE);
+        DrawText(("Max Vel: " + to_string(maxVel)).c_str(), 10, 110, 20, WHITE);
+
         // // Display the computation time
         // DrawText(("Computation time: " + to_string(lastComputationTime)).c_str(), 10, 30, 20, WHITE);
         // // Display the draw time
