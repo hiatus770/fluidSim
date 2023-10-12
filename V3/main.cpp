@@ -99,7 +99,7 @@ void gaussSiedel (int iter, int *d, int *d0, float k){
         for (int i = 1; i < cellResolution + 1; i++){
             for (int j = 1; j < cellResolution + 1; j++){
                 // The next value of density is the average of the surrounding values including the k cfonstnat
-                d[IX(i,j)] = (d0[IX(i,j)] + k * (temp[IX(i-1,j)] + temp[IX(i+1,j)] + temp[IX(i,j-1)] + temp[IX(i,j+1)])/4) / (1 + k);
+                d[IX(i,j)] = (d0[IX(i,j)] + k * (temp[IX(i-1,j)] + temp[IX(i+1,j)] + temp[IX(i,j-1)] + temp[IX(i,j+1)])) / (1 + 4*k);
 
             }
         }
