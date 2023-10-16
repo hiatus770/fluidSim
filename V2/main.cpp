@@ -49,7 +49,6 @@ void add_source(int N, float *x, float *s, float dt)
     for (i = 0; i < size; i++)
         x[i] += dt * s[i];
 }
-
 void set_bnd(int N, int b, float *x)
 {
     int i;
@@ -293,27 +292,27 @@ int main()
             // dens_prev[IX(x, y)] = 255;
         }
 
-        // Mkae a velocity field where the mouse is
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
-        {
-            Vector2 mousePos = GetMousePosition();
-            Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, cam);
-            int x = (int)mouseWorldPos.x;
-            int y = (int)mouseWorldPos.y;
-            x = x / (screenWidth / cellResolution);
-            y = y / (screenHeight / cellResolution);
-            if (x >= 0 && x < cellResolution && y >= 0 && y < cellResolution)
-            {
-                if (x >= 1 && x < cellResolution && y >= 1 && y < cellResolution)
-                {
-                    // Make velocity changedirection based on the mouse movement
-                    // GetMouseDelta
-                    Vector2 mouseDelta = GetMouseDelta();
-                    // u[IX(x, y)] = mouseDelta.x * 20;
-                    // v[IX(x, y)] = mouseDelta.y * 20;
-                }
-            }
-        }
+        // // Mkae a velocity field where the mouse is
+        // if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+        // {
+        //     Vector2 mousePos = GetMousePosition();
+        //     Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, cam);
+        //     int x = (int)mouseWorldPos.x;
+        //     int y = (int)mouseWorldPos.y;
+        //     x = x / (screenWidth / cellResolution);
+        //     y = y / (screenHeight / cellResolution);
+        //     if (x >= 0 && x < cellResolution && y >= 0 && y < cellResolution)
+        //     {
+        //         if (x >= 1 && x < cellResolution && y >= 1 && y < cellResolution)
+        //         {
+        //             // Make velocity changedirection based on the mouse movement
+        //             // GetMouseDelta
+        //             Vector2 mouseDelta = GetMouseDelta();
+        //             // u[IX(x, y)] = mouseDelta.x * 20;
+        //             // v[IX(x, y)] = mouseDelta.y * 20;
+        //         }
+        //     }
+        // }
 
         // Compute the velocity field
         // vel_step(cellResolution, u, v, u_prev, v_prev, 0.001, 0.001);
@@ -371,15 +370,15 @@ int main()
         }
 
         // Draw the streamlines, 100 rays for the entire scren
-        // for (int i = 0; i < 30; i++)
-        // {
-        //     float x = i * (screenWidth / 30);
-        //     for (int j = 0; j < 30; j++)
-        //     {
-        //         float y = j * (screenHeight / 30);
-        //         drawStreamLine(x, y, 15);
-        //     }
-        // }
+        for (int i = 0; i < 30; i++)
+        {
+            float x = i * (screenWidth / 30);
+            for (int j = 0; j < 30; j++)
+            {
+                float y = j * (screenHeight / 30);
+                // drawStreamLine(x, y, 15);
+            }
+        }
     
         // // Draw the velocity field
         // for (int i = 0; i < cellResolution; i++)
