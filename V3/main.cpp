@@ -195,12 +195,12 @@ int main()
     Camera2D cam = {0};
     cam.zoom = 1;
 
-    for(int i = 0; i < 10; i++){
-        for (int j = 50; j < 200; j++){
-            u[IX(j+i,j+i)] = 10000; 
-            v[IX(j+i,j+i)] = 10000; 
-        }
-    }
+    // for(int i = 0; i < 10; i++){
+    //     for (int j = 50; j < 200; j++){
+    //         u[IX(j+i,j+i)] = 10000; 
+    //         v[IX(j+i,j+i)] = 10000; 
+    //     }
+    // }
 
     while (WindowShouldClose() == false)
     {
@@ -235,7 +235,6 @@ int main()
 
             if (x > 0 && x < cellResolution && y > 0 && y < cellResolution)
             {
-                cout << "Added" << endl;
                 pastDensity[IX(floor(x), floor(y))] = 10000;
             }
         }
