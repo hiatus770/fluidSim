@@ -46,9 +46,20 @@ To linear solve all ofthese, we have a set amount of iterations and we set the i
 - Conjugate Gradient
 - Fast Fourier Transform
 
+## Advection
+We use a semi lagrangian method to solve for the advection. We trace back in time and make the density at the current time the density at the previous time using interpolation. 
+We go back in time by using negative velcoity at certain steps until we trace back to a starting point using the time difference given. 
 
+## Projection
 
-
+This is the last step, we want to get rid of divergence and curl of our velocity field
+- Using hodge decomposiiton we can take any vector  field and split it by its mass conserving part and its gradient 
+- The gradient has no curl and the mass conserving part has no divergence
+- So we can subtract the divergence from the original field to get the mass conserving field of velocities
+$$ \text{Mass Conserving Field} = \text{Initial Field} - \text{Gradient Field}$$ 
+- The gradient is the direction of steepest descent of a height field 
+- Derivative of X $ \text{Gx}[x, y] = \frac{1}{2} \cdot (x[x+1, y] - x[x-1, y]) / h $ 
+- Derivative of Y $ \text{Gy}[x, y] = \frac{1}{2} \cdot (x[x, y+1] - x[x, y-1]) / h $
 
 # Articles / Links
 https://www.youtube.com/watch?v=x9xPX3WiK3E

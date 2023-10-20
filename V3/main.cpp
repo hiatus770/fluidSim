@@ -13,7 +13,7 @@
 #define HEIGHTGAME 100
 #define toDegree(x) (x * 180.0 / 3.14159)
 #define toRadian(x) (x * 3.14159 / 180.0)
-#define gameFPS 200
+#define gameFPS 60
 #define getDecimal(x) (x - (int)x)
 #define sgn(x) (x < 0 ? -1 : 1)
 
@@ -25,7 +25,8 @@ const int maxWidth = screenWidth;
 const int maxHeight = screenHeight;
 const int minWidth = 0;
 const int minHeight = 0;
-const int cellResolution = 250;
+const int cellResolution = 50;
+#define float double
 const float k = 0.1;
 const int size = (cellResolution + 2) * (cellResolution + 2);
 
@@ -43,8 +44,10 @@ const int size = (cellResolution + 2) * (cellResolution + 2);
 // Global Densities
 float density[size];
 float pastDensity[size];
-float u[size]; // X component of velocity
-float v[size]; // Y component of velocity
+float u[size];  // X component of velocity
+float v[size];  // Y component of velocity
+float u0[size]; // X component of past velocity
+float v0[size]; // Y component of past velocity
 
 int wall[size];
 
@@ -77,34 +80,16 @@ void addSource(int N, float *x, float *s, float dt)
 // This function is used to diffuse the density and the velocity
 void gaussSiedel(int iter, float *d, float *d0, float a, float dt)
 {
-    // Density is the current value, we do not change this
-    int temp[size];
 
-    addSource(size, density, pastDensity, dt);
+    float c = a * dt * (cellResolution) * (cellResolution);
 
-    memset(temp, 0, sizeof(temp));
-    float k = a * cellResolution * cellResolution * dt;
-
-    // SWAP(d0, d);
-
-    // Density is given to us as our current value for density, the next value can be solved for using a system of simultaneous equations
-    for (int iters = 0; iters < iter; iters++)
+    for (int k = 0; k < iter; k++)
     {
-        for (int i = 1; i < cellResolution + 1; i++)
+        for (int i = 1; i <= cellResolution; i++)
         {
-            for (int j = 1; j < cellResolution + 1; j++)
+            for (int j = 1; j <= cellResolution; j++)
             {
-                // The next value of density is the average of the surrounding values including the k cfonstnat
-                // d[IX(i, j)] = (d0[IX(i, j)] + k * (d[IX(i - 1, j)] + d[IX(i + 1, j)] + d[IX(i, j - 1)] + d[IX(i, j + 1)])) / (1 + 4 * k);
-                // Add a case for each wall type, and make sure to not use the 0 density, so if there are only 3 valid densities, use those
-                if (wall[IX(i, j)] == 1)
-                {
-                    d[IX(i, j)] = 0;
-                }
-                else
-                {
-                    d[IX(i, j)] = (d0[IX(i, j)] + k * (d[IX(i - 1, j)] + d[IX(i + 1, j)] + d[IX(i, j - 1)] + d[IX(i, j + 1)])) / (1 + 4 * k);
-                }
+                d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i + 1, j)] + d[IX(i - 1, j)] + d[IX(i, j + 1)] + d[IX(i, j - 1)])) / (1 + 4 * c);
             }
         }
         set_bnd(cellResolution, 0, d);
@@ -142,24 +127,27 @@ void advect(float *dens, float *dens0, float *u, float *v, float dt)
     }
 }
 
-void drawDensity()
+void drawArray(float *v, int t = 0)
 {
-    for (int i = 0; i < cellResolution; i++)
+    for (int i = 0; i <= cellResolution + 1; i++)
     {
-        for (int j = 0; j < cellResolution; j++)
+        for (int j = 0; j <= cellResolution + 1; j++)
         {
             // Make sure density is capped at 255
 
             Color color = {0};
-            float d = density[IX(i, j)];
+            float d = v[IX(i, j)];
+
+            // DrawText(TextFormat("I: %d J: %d", i, j), i * (screenWidth / cellResolution), j * (screenHeight / cellResolution) + 15, 10, WHITE);
+            // DrawText(TextFormat("%f", d), i * (screenWidth / cellResolution), j * (screenHeight / cellResolution), 10, WHITE);
+
             if (d > 255)
             {
                 d = 255;
             }
-            if (d < 10 && d > 0)
+            if (d < 0.1 && d > 0)
             {
                 color.r = 255;
-                d += 50;
             }
             if (d > 0)
             {
@@ -167,6 +155,29 @@ void drawDensity()
                 color.a = d;
                 color.g = 255;
                 color.b = 255;
+                if (t == 1)
+                {
+                    color.r = d;
+                }
+                if (t == 2)
+                {
+                    color.g = d;
+                }
+                // Stats for each cube
+                // I and J values
+                // If its a border color it red
+                if (i == 0 || i == cellResolution + 1 || j == 0 || j == cellResolution + 1)
+                {
+                    if (v[IX(i, j)] > 0.0000001){
+                        cout << "TOUCHED BORDER" << endl;
+                        // DRaw text bside the delta sum
+                        DrawText(TextFormat("TOUCHED BORDER"), -10, -80, 20, WHITE);
+                    }
+                    color.r = 255;
+                    color.g = 0;
+                    color.b = 0;
+                }
+
                 DrawRectangle(i * (screenWidth / cellResolution), j * (screenHeight / cellResolution), screenWidth / cellResolution, screenHeight / cellResolution, color);
             }
         }
@@ -176,31 +187,20 @@ void drawDensity()
 // Main function
 int main()
 {
-    
-    float shiftSigmoid = 248;
-    float multiplierSigmoid = 20;
-    float yMultiplierSigmoid = 255;
-    float minVel = 10000000;
-    float maxVel = 0;
-
     memset(wall, 0, sizeof(wall));
-    memset(density, 0, sizeof(density));
+    memset(density, 1, sizeof(density));
     memset(pastDensity, 0, sizeof(pastDensity));
-    memset(v,0, sizeof(v)); 
-    memset(u,0, sizeof(u)); 
+    memset(v, 0, sizeof(v));
+    memset(u, 0, sizeof(u));
+    memset(v0, 0, sizeof(v0));
+    memset(u0, 0, sizeof(u0));
+    float pastSum = 0;
 
-    InitWindow(screenWidth, screenHeight, "Fluiduh");
+    InitWindow(screenWidth, screenHeight, "fluid");
     SetTargetFPS(gameFPS);
 
     Camera2D cam = {0};
     cam.zoom = 1;
-
-    // for(int i = 0; i < 10; i++){
-    //     for (int j = 50; j < 200; j++){
-    //         u[IX(j+i,j+i)] = 10000; 
-    //         v[IX(j+i,j+i)] = 10000; 
-    //     }
-    // }
 
     while (WindowShouldClose() == false)
     {
@@ -222,6 +222,8 @@ int main()
                 cam.zoom = 0.1f;
         }
 
+        memset(pastDensity, 0, sizeof(pastDensity));
+
         // Adding a source for the densities
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
         {
@@ -233,13 +235,12 @@ int main()
             x = x / (screenWidth / cellResolution);
             y = y / (screenHeight / cellResolution);
 
-            if (x > 0 && x < cellResolution && y > 0 && y < cellResolution)
+            if (x >= 1 && x < cellResolution && y > 0 && y < cellResolution)
             {
-                pastDensity[IX(floor(x), floor(y))] = 10000;
+                pastDensity[IX(floor(x), floor(y))] = 100000;
             }
         }
-        // Velocity 
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
         {
             Vector2 mousePos = GetMousePosition();
             Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, cam);
@@ -247,71 +248,80 @@ int main()
             int y = (int)mouseWorldPos.y;
             x = x / (screenWidth / cellResolution);
             y = y / (screenHeight / cellResolution);
-            if (x >= 0 && x < cellResolution && y >= 0 && y < cellResolution)
+
+            if (x >= 1 && x <= cellResolution && y >= 1 && y <= cellResolution)
             {
-                if (x >= 1 && x < cellResolution && y >= 1 && y < cellResolution)
-                {
-                    // Make velocity changedirection based on the mouse movement
-                    // GetMouseDelta
-                    Vector2 mouseDelta = GetMouseDelta();
-                    u[IX(x, y)] = mouseDelta.x * 200;
-                    v[IX(x, y)] = mouseDelta.y * 200;
-                }
+                pastDensity[IX(floor(x), floor(y))] = 0;
             }
         }
+        // // Velocity
+        // if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+        // {
+        //     Vector2 mousePos = GetMousePosition();
+        //     Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, cam);
+        //     int x = (int)mouseWorldPos.x;
+        //     int y = (int)mouseWorldPos.y;
+        //     x = x / (screenWidth / cellResolution);
+        //     y = y / (screenHeight / cellResolution);
+        //     if (x >= 0 && x < cellResolution && y >= 0 && y < cellResolution)
+        //     {
+        //         if (x >= 1 && x < cellResolution && y >= 1 && y < cellResolution)
+        //         {
+        //             // Make velocity changedirection based on the mouse movement
+        //             // GetMouseDelta
+        //             // Vector2 mouseDelta = GetMouseDelta();
+        //             // u[IX(x, y)] = mouseDelta.x * 200;
+        //             // v[IX(x, y)] = mouseDelta.y * 200;
+        //         }
+        //     }
+        // }
 
-        // Diffuse
-        // K is the delta t betwene the last frame and the current frame
-        float k = GetFrameTime();
+        if (IsKeyDown(KEY_SPACE))
+        {
+            memset(density, 0, sizeof(density));
+            memset(pastDensity, 0, sizeof(pastDensity));
+        }
 
-        // Density Steps 
-        gaussSiedel(8, density, pastDensity, 0.01, 0.001);
-        swap(density, pastDensity); 
-        advect(density, pastDensity, u, v, 0.001); 
+        // Density Steps
+        float dt = 0.004;
+        float a = 0.01;
 
-        // Velocity Steps 
+        addSource(size, density, pastDensity, dt);
+        swap(pastDensity, density); // Now density is set to nothing
+        gaussSiedel(20, density, pastDensity, a, dt);
 
-
-        
+        // // // Velocity Steps for the simulation
+        // swap(v, v0);
+        // swap(u, u0);
+        // gaussSiedel(20, v, v0, a, dt);
+        // gaussSiedel(20, u, u0, a, dt);
 
         BeginDrawing();
         ClearBackground(BLACK);
         BeginMode2D(cam);
 
         // Displaying the density
-        drawDensity();
-        for (int i = 0; i < cellResolution; i++)
-        {
-            for (int j = 0; j < cellResolution; j++)
-            {
-                if (u[IX(i, j)] == 0 || v[IX(i, j)] == 0){
-                    continue; 
-                }
-                // Shift by half a cell to get the center of the cell
-                float x = i * (screenWidth / cellResolution) + (screenWidth / cellResolution) / 2;
-                float y = j * (screenHeight / cellResolution) + (screenHeight / cellResolution) / 2;
-                float uVel = u[IX(i, j)];
-                float vVel = v[IX(i, j)];
-                float velMagnitude = sqrt(uVel * uVel + vVel * vVel);
-                minVel = min(minVel, velMagnitude);
-                maxVel = max(maxVel, velMagnitude);
-                float sigmoided = yMultiplierSigmoid / (1 + exp(-(velMagnitude - shiftSigmoid) / multiplierSigmoid));
-                // Scale both down if greater than 10
-                if (velMagnitude > 5)
-                {
-                    uVel /= velMagnitude / 5;
-                    vVel /= velMagnitude / 5;
-                }
-                Color color = ColorFromHSV((sigmoided), 255, 150);
-                // Draw the veolcity as a square
-                // DrawRectangle(x, y, 10, 10, color);
-                // drawStreamLine(x, y, 10); 
-                DrawLine(x, y, x + 4 * uVel / velMagnitude, y + (vVel) / velMagnitude * 4, ColorFromHSV((sigmoided), 255, 150));
-            }
-        }
+        drawArray(density);
 
         // End of camera movement
         EndMode2D();
+
+        // Sum up the entire array
+        float sum = 0;
+
+        for (int x = 1; x <= cellResolution; x++)
+        {
+            for (int y = 1; y <= cellResolution; y++)
+            {
+                sum += density[IX(x, y)];
+            }
+        }
+        // Display
+        DrawText(TextFormat("Sum: %f", sum), 10, 40, 20, WHITE);
+        DrawText(TextFormat("Delta Sum: %f", (sum - pastSum) / GetFrameTime()), 10, 20, 20, WHITE);
+        // Average Sum
+        DrawText(TextFormat("Average Sum: %f", sum / size), 10, 60, 20, WHITE);
+        pastSum = sum;
 
         // Display the FPS currently
         DrawFPS(10, 10);

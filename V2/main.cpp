@@ -287,44 +287,44 @@ int main()
             // Make sure its not out of bounds
             if (x >= 1 && x < cellResolution && y >= 1 && y < cellResolution)
             {
-                dens[IX(x, y)] = 15;
+                dens[IX(x, y)] = 100;
             }
             // dens_prev[IX(x, y)] = 255;
         }
 
-        // // Mkae a velocity field where the mouse is
-        // if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
-        // {
-        //     Vector2 mousePos = GetMousePosition();
-        //     Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, cam);
-        //     int x = (int)mouseWorldPos.x;
-        //     int y = (int)mouseWorldPos.y;
-        //     x = x / (screenWidth / cellResolution);
-        //     y = y / (screenHeight / cellResolution);
-        //     if (x >= 0 && x < cellResolution && y >= 0 && y < cellResolution)
-        //     {
-        //         if (x >= 1 && x < cellResolution && y >= 1 && y < cellResolution)
-        //         {
-        //             // Make velocity changedirection based on the mouse movement
-        //             // GetMouseDelta
-        //             Vector2 mouseDelta = GetMouseDelta();
-        //             // u[IX(x, y)] = mouseDelta.x * 20;
-        //             // v[IX(x, y)] = mouseDelta.y * 20;
-        //         }
-        //     }
-        // }
+        // Mkae a velocity field where the mouse is
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+        {
+            Vector2 mousePos = GetMousePosition();
+            Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, cam);
+            int x = (int)mouseWorldPos.x;
+            int y = (int)mouseWorldPos.y;
+            x = x / (screenWidth / cellResolution);
+            y = y / (screenHeight / cellResolution);
+            if (x >= 0 && x < cellResolution && y >= 0 && y < cellResolution)
+            {
+                if (x >= 1 && x < cellResolution && y >= 1 && y < cellResolution)
+                {
+                    // Make velocity changedirection based on the mouse movement
+                    // GetMouseDelta
+                    Vector2 mouseDelta = GetMouseDelta();
+                    // u[IX(x, y)] = mouseDelta.x * 20;
+                    // v[IX(x, y)] = mouseDelta.y * 20;
+                }
+            }
+        }
 
         // Compute the velocity field
         // vel_step(cellResolution, u, v, u_prev, v_prev, 0.001, 0.001);
         dens_step(cellResolution, dens, dens_prev, u, v, 0.01, 0.001);
-        // Dissipate the density field
-        for (int i = 0; i < cellResolution; i++)
-        {
-            for (int j = 0; j < cellResolution; j++)
-            {
-                dens[IX(i, j)] *= 0.999;
-            }
-        }
+        // // Dissipate the density field
+        // for (int i = 0; i < cellResolution; i++)
+        // {
+        //     for (int j = 0; j < cellResolution; j++)
+        //     {
+        //         dens[IX(i, j)] *= 0.999;
+        //     }
+        // }
 
         drawTime = GetTime();
 
@@ -359,7 +359,7 @@ int main()
                     // Make it based on the density for transparency and the velocity for color
                     Color color = ColorFromHSV((abs(u[IX(i, j)]) + abs(v[IX(i, j)])) / 2, 255, 100);
                     // Add transparency based on the density
-                    color.a = (density - minDensity) * 50;
+                    color.a = (density) * 10;
 
                     color.g = 255;
                     color.b = 255;
@@ -380,33 +380,33 @@ int main()
             }
         }
     
-        // // Draw the velocity field
-        // for (int i = 0; i < cellResolution; i++)
-        // {
-        //     for (int j = 0; j < cellResolution; j++)
-        //     {
-        //         // Shift by half a cell to get the center of the cell
-        //         float x = i * (screenWidth / cellResolution) + (screenWidth / cellResolution) / 2;
-        //         float y = j * (screenHeight / cellResolution) + (screenHeight / cellResolution) / 2;
-        //         float uVel = u[IX(i, j)];
-        //         float vVel = v[IX(i, j)];
-        //         float velMagnitude = sqrt(uVel * uVel + vVel * vVel);
-        //         minVel = min(minVel, velMagnitude);
-        //         maxVel = max(maxVel, velMagnitude);
-        //         float sigmoided = yMultiplierSigmoid / (1 + exp(-(velMagnitude - shiftSigmoid) / multiplierSigmoid));
-        //         // Scale both down if greater than 10
-        //         if (velMagnitude > 5)
-        //         {
-        //             uVel /= velMagnitude / 5;
-        //             vVel /= velMagnitude / 5;
-        //         }
-        //         Color color = ColorFromHSV((sigmoided), 255, 150);
-        //         // Draw the veolcity as a square
-        //         // DrawRectangle(x, y, 10, 10, color);
-        //         drawStreamLine(x, y, 10); 
-        //         // DrawLine(x, y, x + 4 * uVel / velMagnitude, y + (vVel) / velMagnitude * 4, ColorFromHSV((sigmoided), 255, 150));
-        //     }
-        // }
+        // Draw the velocity field
+        for (int i = 0; i < cellResolution; i++)
+        {
+            for (int j = 0; j < cellResolution; j++)
+            {
+                // Shift by half a cell to get the center of the cell
+                float x = i * (screenWidth / cellResolution) + (screenWidth / cellResolution) / 2;
+                float y = j * (screenHeight / cellResolution) + (screenHeight / cellResolution) / 2;
+                float uVel = u[IX(i, j)];
+                float vVel = v[IX(i, j)];
+                float velMagnitude = sqrt(uVel * uVel + vVel * vVel);
+                minVel = min(minVel, velMagnitude);
+                maxVel = max(maxVel, velMagnitude);
+                float sigmoided = yMultiplierSigmoid / (1 + exp(-(velMagnitude - shiftSigmoid) / multiplierSigmoid));
+                // Scale both down if greater than 10
+                if (velMagnitude > 5)
+                {
+                    uVel /= velMagnitude / 5;
+                    vVel /= velMagnitude / 5;
+                }
+                Color color = ColorFromHSV((sigmoided), 255, 150);
+                // Draw the veolcity as a square
+                // DrawRectangle(x, y, 10, 10, color);
+                // drawStreamLine(x, y, 1); 
+                // DrawLine(x, y, x + 4 * uVel / velMagnitude, y + (vVel) / velMagnitude * 4, ColorFromHSV((sigmoided), 255, 150));
+            }
+        }
 
 
         EndMode2D();
