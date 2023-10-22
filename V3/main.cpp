@@ -25,7 +25,7 @@ const int maxWidth = screenWidth;
 const int maxHeight = screenHeight;
 const int minWidth = 0;
 const int minHeight = 0;
-const int cellResolution = 50;
+const int cellResolution = 100;
 #define float double
 const float k = 0.1;
 const int size = (cellResolution + 2) * (cellResolution + 2);
@@ -49,7 +49,7 @@ float v[size];  // Y component of velocity
 float u0[size]; // X component of past velocity
 float v0[size]; // Y component of past velocity
 
-int wall[size];
+int wall[size]; // 0 is no wall, 1 is wall
 
 // This function sets bounds
 void set_bnd(int N, int b, float *x)
@@ -78,7 +78,7 @@ void addSource(int N, float *x, float *s, float dt)
 }
 
 // This function is used to diffuse the density and the velocity
-void gaussSiedel(int iter, float *d, float *d0, float a, float dt)
+void gaussSiedel(int iter, float *d, float *d0, float a, float dt, int b = 0)
 {
 
     float c = a * dt * (cellResolution) * (cellResolution);
@@ -87,9 +87,77 @@ void gaussSiedel(int iter, float *d, float *d0, float a, float dt)
     {
         for (int i = 1; i <= cellResolution; i++)
         {
+            // Logic for updating average values, if statements are used for wall conditions, otherwise average all 4 cells for the diffusion algorithm
             for (int j = 1; j <= cellResolution; j++)
             {
-                d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i + 1, j)] + d[IX(i - 1, j)] + d[IX(i, j + 1)] + d[IX(i, j - 1)])) / (1 + 4 * c);
+                // Diffusion
+                if (b == 0)
+                {
+                    if (wall[IX(i, j)] == 1)
+                    {
+                        d[IX(i, j)] = 0;
+                        continue;
+                    }
+
+                    // If 3 cells have a wall
+                    if (wall[IX(i + 1, j)] && wall[IX(i, j + 1)] && wall[IX(i, j - 1)])
+                    {
+                        d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i - 1, j)])) / (1 + c);
+                    }
+                    else if (wall[IX(i - 1, j)] && wall[IX(i, j + 1)] && wall[IX(i, j - 1)])
+                    {
+                        d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i + 1, j)])) / (1 + c);
+                    }
+                    else if (wall[IX(i + 1, j)] && wall[IX(i - 1, j)] && wall[IX(i, j - 1)])
+                    {
+                        d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i, j + 1)])) / (1 + c);
+                    }
+                    else if (wall[IX(i + 1, j)] && wall[IX(i - 1, j)] && wall[IX(i, j + 1)])
+                    {
+                        d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i, j - 1)])) / (1 + c);
+                    }
+                    // Two cell combinations
+                    else if (wall[IX(i + 1, j)] && wall[IX(i, j + 1)])
+                    {
+                        d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i - 1, j)] + d[IX(i, j - 1)])) / (1 + 2 * c);
+                    }
+                    else if (wall[IX(i - 1, j)] && wall[IX(i, j + 1)])
+                    {
+                        d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i + 1, j)] + d[IX(i, j - 1)])) / (1 + 2 * c);
+                    }
+                    else if (wall[IX(i + 1, j)] && wall[IX(i, j - 1)])
+                    {
+                        d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i - 1, j)] + d[IX(i, j + 1)])) / (1 + 2 * c);
+                    }
+                    else if (wall[IX(i - 1, j)] && wall[IX(i, j - 1)])
+                    {
+                        d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i + 1, j)] + d[IX(i, j + 1)])) / (1 + 2 * c);
+                    }
+                    else if (wall[IX(i + 1, j)] == 1)
+                    {
+                        d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i - 1, j)] + d[IX(i, j + 1)] + d[IX(i, j - 1)])) / (1 + 3 * c);
+                    }
+                    else if (wall[IX(i - 1, j)] == 1)
+                    {
+                        d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i + 1, j)] + d[IX(i, j + 1)] + d[IX(i, j - 1)])) / (1 + 3 * c);
+                    }
+                    else if (wall[IX(i, j + 1)] == 1)
+                    {
+                        d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i + 1, j)] + d[IX(i - 1, j)] + d[IX(i, j - 1)])) / (1 + 3 * c);
+                    }
+                    else if (wall[IX(i, j - 1)] == 1)
+                    {
+                        d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i + 1, j)] + d[IX(i - 1, j)] + d[IX(i, j + 1)])) / (1 + 3 * c);
+                    }
+                    else
+                    {
+                        d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i + 1, j)] + d[IX(i - 1, j)] + d[IX(i, j + 1)] + d[IX(i, j - 1)])) / (1 + 4 * c);
+                    }
+                } else {
+                    // Velocity 
+                    d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i + 1, j)] + d[IX(i - 1, j)] + d[IX(i, j + 1)] + d[IX(i, j - 1)])) / (1 + 4 * c);
+                    
+                }
             }
         }
         set_bnd(cellResolution, 0, d);
@@ -168,8 +236,8 @@ void drawArray(float *v, int t = 0)
                 // If its a border color it red
                 if (i == 0 || i == cellResolution + 1 || j == 0 || j == cellResolution + 1)
                 {
-                    if (v[IX(i, j)] > 0.0000001){
-                        cout << "TOUCHED BORDER" << endl;
+                    if (v[IX(i, j)] > 0.0000001)
+                    {
                         // DRaw text bside the delta sum
                         DrawText(TextFormat("TOUCHED BORDER"), -10, -80, 20, WHITE);
                     }
@@ -184,21 +252,86 @@ void drawArray(float *v, int t = 0)
     }
 }
 
+void densityStep()
+{
+    // Density Steps
+    float dt = 0.004;
+    float a = 0.01;
+
+    // Adding the user input from the mouse in this step, all user input is put into past density and then added to the density
+    addSource(size, density, pastDensity, dt);
+    swap(pastDensity, density); // Now we set pastDensity to be our main density
+    gaussSiedel(40, density, pastDensity, a, dt);
+}
+
+void velocityStep()
+{
+    float dt = 0.004;
+    float a = 0.01;
+
+    // Velocity Steps for the simulation
+    swap(v, v0);
+    swap(u, u0);
+    gaussSiedel(40, v, v0, a, dt, 1);
+    gaussSiedel(40, u, u0, a, dt, 1);
+    advect(v0, v, u, v, dt);
+    advect(u0, u, u, v, dt);
+    set_bnd(cellResolution, 1, u);
+    set_bnd(cellResolution, 2, v);
+    
+   // Project code goes here
+
+}
+
 // Main function
 int main()
 {
-    memset(wall, 0, sizeof(wall));
+    // Set all boundary tiles to 1 for the wall array
+    for (int row = 0; row < cellResolution + 2; row++)
+    {
+        for (int col = 0; col < cellResolution + 2; col++)
+        {
+            if (row == 0 || row == cellResolution + 1 || col == 0 || col == cellResolution + 1)
+            {
+                wall[IX(row, col)] = 1;
+            }
+            else
+            {
+                wall[IX(row, col)] = 0;
+            }
+        }
+    }
+
+    // Set a test value for the wall
+    wall[IX(10, 10)] = 1;
+    wall[IX(10, 11)] = 1;
+    wall[IX(11, 10)] = 1;
+    wall[IX(11, 11)] = 1;
+
+    // Make a 3 sided square
+    wall[IX(20, 20)] = 1;
+    wall[IX(20, 21)] = 1;
+    wall[IX(20, 22)] = 1;
+    wall[IX(21, 20)] = 1;
+
+    wall[IX(21, 22)] = 1;
+
+    // Set all arrays to 0
     memset(density, 1, sizeof(density));
     memset(pastDensity, 0, sizeof(pastDensity));
     memset(v, 0, sizeof(v));
     memset(u, 0, sizeof(u));
     memset(v0, 0, sizeof(v0));
     memset(u0, 0, sizeof(u0));
+
+    // Past sum used for measuring dt of the sum
     float pastSum = 0;
 
+    // Window initliazation
     InitWindow(screenWidth, screenHeight, "fluid");
     SetTargetFPS(gameFPS);
 
+    // Camera initialization
     Camera2D cam = {0};
     cam.zoom = 1;
 
@@ -222,6 +355,7 @@ int main()
                 cam.zoom = 0.1f;
         }
 
+        // Set density to 0 in order to add new sources from the moue every frame
         memset(pastDensity, 0, sizeof(pastDensity));
 
         // Adding a source for the densities
@@ -248,54 +382,40 @@ int main()
             int y = (int)mouseWorldPos.y;
             x = x / (screenWidth / cellResolution);
             y = y / (screenHeight / cellResolution);
-
-            if (x >= 1 && x <= cellResolution && y >= 1 && y <= cellResolution)
+        }
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+        {
+            Vector2 mousePos = GetMousePosition();
+            Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, cam);
+            int x = (int)mouseWorldPos.x;
+            int y = (int)mouseWorldPos.y;
+            x = x / (screenWidth / cellResolution);
+            y = y / (screenHeight / cellResolution);
+            if (x >= 0 && x < cellResolution && y >= 0 && y < cellResolution)
             {
-                pastDensity[IX(floor(x), floor(y))] = 0;
+                if (x >= 1 && x < cellResolution && y >= 1 && y < cellResolution)
+                {
+                    // Make velocity changedirection based on the mouse movement
+                    // GetMouseDelta
+                    // Vector2 mouseDelta = GetMouseDelta();
+                    // u[IX(x, y)] = mouseDelta.x * 200;
+                    // v[IX(x, y)] = mouseDelta.y * 200;
+                }
             }
         }
-        // // Velocity
-        // if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
-        // {
-        //     Vector2 mousePos = GetMousePosition();
-        //     Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, cam);
-        //     int x = (int)mouseWorldPos.x;
-        //     int y = (int)mouseWorldPos.y;
-        //     x = x / (screenWidth / cellResolution);
-        //     y = y / (screenHeight / cellResolution);
-        //     if (x >= 0 && x < cellResolution && y >= 0 && y < cellResolution)
-        //     {
-        //         if (x >= 1 && x < cellResolution && y >= 1 && y < cellResolution)
-        //         {
-        //             // Make velocity changedirection based on the mouse movement
-        //             // GetMouseDelta
-        //             // Vector2 mouseDelta = GetMouseDelta();
-        //             // u[IX(x, y)] = mouseDelta.x * 200;
-        //             // v[IX(x, y)] = mouseDelta.y * 200;
-        //         }
-        //     }
-        // }
 
+        // Reset all of the densities to be 0
         if (IsKeyDown(KEY_SPACE))
         {
             memset(density, 0, sizeof(density));
             memset(pastDensity, 0, sizeof(pastDensity));
         }
 
-        // Density Steps
-        float dt = 0.004;
-        float a = 0.01;
+        // Simulation steps
+        densityStep();
+        velocityStep();
 
-        addSource(size, density, pastDensity, dt);
-        swap(pastDensity, density); // Now density is set to nothing
-        gaussSiedel(20, density, pastDensity, a, dt);
-
-        // // // Velocity Steps for the simulation
-        // swap(v, v0);
-        // swap(u, u0);
-        // gaussSiedel(20, v, v0, a, dt);
-        // gaussSiedel(20, u, u0, a, dt);
-
+        // Drawing the simulation
         BeginDrawing();
         ClearBackground(BLACK);
         BeginMode2D(cam);
@@ -316,9 +436,11 @@ int main()
                 sum += density[IX(x, y)];
             }
         }
+
         // Display
         DrawText(TextFormat("Sum: %f", sum), 10, 40, 20, WHITE);
         DrawText(TextFormat("Delta Sum: %f", (sum - pastSum) / GetFrameTime()), 10, 20, 20, WHITE);
+
         // Average Sum
         DrawText(TextFormat("Average Sum: %f", sum / size), 10, 60, 20, WHITE);
         pastSum = sum;

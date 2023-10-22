@@ -9,7 +9,12 @@
 		"**/*.exe": true,
 	},
 	"C_Cpp.errorSquiggles": "disabled",
-	"problems.decorations.enabled": false
+	"problems.decorations.enabled": false,
+	"files.associations": {
+		"**/.i3/config": "i3",
+		"**/i3/config": "i3",
+		"iostream": "cpp"
+	}
 
 
 }

@@ -115,6 +115,7 @@ void advect(int N, int b, float *d, float *d0, float *u, float *v, float dt)
     set_bnd(N, b, d);
 }
 
+// This function is used to project the velocity field, this means that it makes sure that the velocity field is divergence free
 void project(int N, float *u, float *v, float *p, float *div)
 {
     int i, j, k;
@@ -308,14 +309,14 @@ int main()
                     // Make velocity changedirection based on the mouse movement
                     // GetMouseDelta
                     Vector2 mouseDelta = GetMouseDelta();
-                    // u[IX(x, y)] = mouseDelta.x * 20;
-                    // v[IX(x, y)] = mouseDelta.y * 20;
+                    u[IX(x, y)] = mouseDelta.x * 20;
+                    v[IX(x, y)] = mouseDelta.y * 20;
                 }
             }
         }
 
         // Compute the velocity field
-        // vel_step(cellResolution, u, v, u_prev, v_prev, 0.001, 0.001);
+        vel_step(cellResolution, u, v, u_prev, v_prev, 0.001, 0.001);
         dens_step(cellResolution, dens, dens_prev, u, v, 0.01, 0.001);
         // // Dissipate the density field
         // for (int i = 0; i < cellResolution; i++)
@@ -376,7 +377,7 @@ int main()
             for (int j = 0; j < 30; j++)
             {
                 float y = j * (screenHeight / 30);
-                // drawStreamLine(x, y, 15);
+                drawStreamLine(x, y, 15);
             }
         }
     
