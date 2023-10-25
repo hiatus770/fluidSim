@@ -153,10 +153,11 @@ void gaussSiedel(int iter, float *d, float *d0, float a, float dt, int b = 0)
                     {
                         d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i + 1, j)] + d[IX(i - 1, j)] + d[IX(i, j + 1)] + d[IX(i, j - 1)])) / (1 + 4 * c);
                     }
-                } else {
-                    // Velocity 
+                }
+                else
+                {
+                    // Velocity
                     d[IX(i, j)] = (d0[IX(i, j)] + c * (d[IX(i + 1, j)] + d[IX(i - 1, j)] + d[IX(i, j + 1)] + d[IX(i, j - 1)])) / (1 + 4 * c);
-                    
                 }
             }
         }
@@ -193,6 +194,44 @@ void advect(float *dens, float *dens0, float *u, float *v, float dt)
             dens[IX(i, j)] = t0 * (s0 * dens0[IX(i0, j0)] + s1 * dens0[IX(i0, j1)]) + t1 * (s0 * dens0[IX(i1, j0)] + s1 * dens0[IX(i1, j1)]);
         }
     }
+}
+
+void project(float *u, float *v, float *p, float *div)
+{
+    int i, j, k;
+    float h;
+    h = 1.0 / cellResolution;
+    for (i = 1; i <= cellResolution; i++)
+    {
+        for (j = 1; j <= cellResolution; j++)
+        {
+            div[IX(i, j)] = -0.5 * h * (u[IX(i + 1, j)] - u[IX(i - 1, j)] + v[IX(i, j + 1)] - v[IX(i, j - 1)]);
+            p[IX(i, j)] = 0;
+        }
+    }
+    set_bnd(cellResolution, 0, div);
+    set_bnd(cellResolution, 0, p);
+    for (k = 0; k < 20; k++)
+    {
+        for (i = 1; i <= cellResolution; i++)
+        {
+            for (j = 1; j <= cellResolution; j++)
+            {
+                p[IX(i, j)] = (div[IX(i, j)] + p[IX(i - 1, j)] + p[IX(i + 1, j)] + p[IX(i, j - 1)] + p[IX(i, j + 1)]) / 4;
+            }
+        }
+        set_bnd(cellResolution, 0, p);
+    }
+    for (i = 1; i <= cellResolution; i++)
+    {
+        for (j = 1; j <= cellResolution; j++)
+        {
+            u[IX(i, j)] -= 0.5 * (p[IX(i + 1, j)] - p[IX(i - 1, j)]) / h;
+            v[IX(i, j)] -= 0.5 * (p[IX(i, j + 1)] - p[IX(i, j - 1)]) / h;
+        }
+    }
+    set_bnd(cellResolution, 1, u);
+    set_bnd(cellResolution, 1, v);
 }
 
 void drawArray(float *v, int t = 0)
@@ -262,27 +301,62 @@ void densityStep()
     addSource(size, density, pastDensity, dt);
     swap(pastDensity, density); // Now we set pastDensity to be our main density
     gaussSiedel(40, density, pastDensity, a, dt);
+    swap(pastDensity, density); // Now we set pastDensity to be our main density
+    advect(density, pastDensity, u, v, dt);
 }
 
 void velocityStep()
 {
     float dt = 0.004;
     float a = 0.01;
+    swap(u0, u);
+    swap(v0, v);
+    addSource(size, u, u0, dt);
 
-    // Velocity Steps for the simulation
-    swap(v, v0);
-    swap(u, u0);
-    gaussSiedel(40, v, v0, a, dt, 1);
-    gaussSiedel(40, u, u0, a, dt, 1);
+    // // Velocity Steps for the simulation
+    gaussSiedel(80, v, v0, a, dt, 1);
+    gaussSiedel(80, u, u0, a, dt, 1);
+
     advect(v0, v, u, v, dt);
     advect(u0, u, u, v, dt);
-    set_bnd(cellResolution, 1, u);
-    set_bnd(cellResolution, 2, v);
-    
-   // Project code goes here
 
+    // swap(u0, u);
+    // swap(v0, v);
+    // project(u, v, u0, v0);
+
+    // Project code goes here
 }
 
+void drawVelocities()
+{
+    float shiftSigmoid = 248;
+    float multiplierSigmoid = 20;
+    float yMultiplierSigmoid = 255;
+    for (int i = 0; i < cellResolution; i++)
+    {
+        for (int j = 0; j < cellResolution; j++)
+        {
+            // Shift by half a cell to get the center of the cell
+            float x = i * (screenWidth / cellResolution) + (screenWidth / cellResolution) / 2;
+            float y = j * (screenHeight / cellResolution) + (screenHeight / cellResolution) / 2;
+            float uVel = u[IX(i, j)];
+            float vVel = v[IX(i, j)];
+            float velMagnitude = sqrt(uVel * uVel + vVel * vVel);
+            float sigmoided = yMultiplierSigmoid / (1 + exp(-(velMagnitude - shiftSigmoid) / multiplierSigmoid));
+            // Scale both down if greater than 10
+            if (velMagnitude > 5)
+            {
+                uVel /= velMagnitude / 5;
+                vVel /= velMagnitude / 5;
+            }
+            Color color = ColorFromHSV((sigmoided), 255, 150);
+            // Draw the veolcity as a square
+            // DrawRectangle(x, y, 10, 10, color);
+            // drawStreamLine(x, y, 1);
+            DrawLine(x, y, x + 4 * uVel / velMagnitude, y + (vVel) / velMagnitude * 4, ColorFromHSV((sigmoided), 255, 150));
+        }
+    }
+}
 // Main function
 int main()
 {
@@ -302,19 +376,19 @@ int main()
         }
     }
 
-    // Set a test value for the wall
-    wall[IX(10, 10)] = 1;
-    wall[IX(10, 11)] = 1;
-    wall[IX(11, 10)] = 1;
-    wall[IX(11, 11)] = 1;
+    // // Set a test value for the wall
+    // wall[IX(10, 10)] = 1;
+    // wall[IX(10, 11)] = 1;
+    // wall[IX(11, 10)] = 1;
+    // wall[IX(11, 11)] = 1;
 
-    // Make a 3 sided square
-    wall[IX(20, 20)] = 1;
-    wall[IX(20, 21)] = 1;
-    wall[IX(20, 22)] = 1;
-    wall[IX(21, 20)] = 1;
+    // // Make a 3 sided square
+    // wall[IX(20, 20)] = 1;
+    // wall[IX(20, 21)] = 1;
+    // wall[IX(20, 22)] = 1;
+    // wall[IX(21, 20)] = 1;
 
-    wall[IX(21, 22)] = 1;
+    // wall[IX(21, 22)] = 1;
 
     // Set all arrays to 0
     memset(density, 1, sizeof(density));
@@ -357,6 +431,8 @@ int main()
 
         // Set density to 0 in order to add new sources from the moue every frame
         memset(pastDensity, 0, sizeof(pastDensity));
+        memset(v0, 0, sizeof(v0));
+        memset(u0, 0, sizeof(u0));
 
         // Adding a source for the densities
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
@@ -372,6 +448,15 @@ int main()
             if (x >= 1 && x < cellResolution && y > 0 && y < cellResolution)
             {
                 pastDensity[IX(floor(x), floor(y))] = 100000;
+                Vector2 mouseDelta = GetMouseDelta();
+                Vector2 mousePos = GetMousePosition();
+                Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, cam);
+                int x = (int)mouseWorldPos.x;
+                int y = (int)mouseWorldPos.y;
+                x = x / (screenWidth / cellResolution);
+                y = y / (screenHeight / cellResolution);
+                u[IX(x, y)] = mouseDelta.x * 20;
+                v[IX(x, y)] = mouseDelta.y * 20;
             }
         }
         if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
@@ -383,26 +468,6 @@ int main()
             x = x / (screenWidth / cellResolution);
             y = y / (screenHeight / cellResolution);
         }
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
-        {
-            Vector2 mousePos = GetMousePosition();
-            Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, cam);
-            int x = (int)mouseWorldPos.x;
-            int y = (int)mouseWorldPos.y;
-            x = x / (screenWidth / cellResolution);
-            y = y / (screenHeight / cellResolution);
-            if (x >= 0 && x < cellResolution && y >= 0 && y < cellResolution)
-            {
-                if (x >= 1 && x < cellResolution && y >= 1 && y < cellResolution)
-                {
-                    // Make velocity changedirection based on the mouse movement
-                    // GetMouseDelta
-                    // Vector2 mouseDelta = GetMouseDelta();
-                    // u[IX(x, y)] = mouseDelta.x * 200;
-                    // v[IX(x, y)] = mouseDelta.y * 200;
-                }
-            }
-        }
 
         // Reset all of the densities to be 0
         if (IsKeyDown(KEY_SPACE))
@@ -413,6 +478,7 @@ int main()
 
         // Simulation steps
         densityStep();
+        // Velocity stpes
         velocityStep();
 
         // Drawing the simulation
@@ -422,6 +488,29 @@ int main()
 
         // Displaying the density
         drawArray(density);
+        // Draw the velocities
+        for (int i = 0; i < cellResolution; i++)
+        {
+            for (int j = 0; j < cellResolution; j++)
+            {
+                // Draw the veolcity as a square
+                float x = i * (screenWidth / cellResolution) + (screenWidth / cellResolution) / 2;
+                float y = j * (screenHeight / cellResolution) + (screenHeight / cellResolution) / 2;
+                float uVel = u[IX(i, j)];
+                float vVel = v[IX(i, j)];
+                float velMagnitude = sqrt(uVel * uVel + vVel * vVel);
+                if (0.4 * uVel < 1 && 0.4 * vVel < 1)
+                {
+                    // Draw vector with magnitude of one
+                    DrawLine(x, y, x + 1 * uVel / uVel, y + 0.4 * (vVel / vVel), ColorFromHSV(255, 255, 150));
+                }
+                else {
+
+                    DrawLine(x, y, x + 0.4 * uVel, y + 0.4 * (vVel), ColorFromHSV(255, 255, 150));
+                    // DrawLine(i * (screenWidth / cellResolution) + (screenWidth / cellResolution) / 2, j * (screenHeight / cellResolution) + (screenHeight / cellResolution) / 2, i * (screenWidth / cellResolution) + (screenWidth / cellResolution) / 2 + 4 * u[IX(i, j)], j * (screenHeight / cellResolution) + (screenHeight / cellResolution) / 2 + (v[IX(i, j)]) * 4, ColorFromHSV(255, 255, 150));
+                }
+            }
+        }
 
         // End of camera movement
         EndMode2D();
