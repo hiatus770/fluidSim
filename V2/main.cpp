@@ -156,8 +156,20 @@ void project(int N, float *u, float *v, float *p, float *div)
 
 void vel_step(int N, float *u, float *v, float *u0, float *v0, float visc, float dt)
 {
+
+    float g = 900.81;
+
+
     add_source(N, u, u0, dt);
     add_source(N, v, v0, dt);
+
+    // Add gravity in a for loop
+    for (int i = 0; i < size; i++)
+    {
+        v0[i] = v[i] + g * dt;
+    }
+
+
     SWAP(u0, u);
     diffuse(N, 1, u, u0, visc, dt);
     SWAP(v0, v);
@@ -302,9 +314,9 @@ int main()
             int y = (int)mouseWorldPos.y;
             x = x / (screenWidth / cellResolution);
             y = y / (screenHeight / cellResolution);
-            if (x >= 0 && x < cellResolution && y >= 0 && y < cellResolution)
+            if (x >= 0 && x <= cellResolution && y >= 0 && y <= cellResolution)
             {
-                if (x >= 1 && x < cellResolution && y >= 1 && y < cellResolution)
+                if (x >= 1 && x <= cellResolution && y >= 1 && y <= cellResolution)
                 {
                     // Make velocity changedirection based on the mouse movement
                     // GetMouseDelta
@@ -377,7 +389,7 @@ int main()
             for (int j = 0; j < 30; j++)
             {
                 float y = j * (screenHeight / 30);
-                drawStreamLine(x, y, 15);
+                // drawStreamLine(x, y, 15);
             }
         }
     
@@ -405,7 +417,7 @@ int main()
                 // Draw the veolcity as a square
                 // DrawRectangle(x, y, 10, 10, color);
                 // drawStreamLine(x, y, 1); 
-                // DrawLine(x, y, x + 4 * uVel / velMagnitude, y + (vVel) / velMagnitude * 4, ColorFromHSV((sigmoided), 255, 150));
+                DrawLine(x, y, x + 4 * uVel / velMagnitude, y + (vVel) / velMagnitude * 4, ColorFromHSV((sigmoided), 255, 150));
             }
         }
 
