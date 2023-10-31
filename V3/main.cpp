@@ -19,8 +19,8 @@
 
 using namespace std;
 
-const int screenWidth = 1200;
-const int screenHeight = 1200;
+const int screenWidth = 500;
+const int screenHeight = 500;
 const int maxWidth = screenWidth;
 const int maxHeight = screenHeight;
 const int minWidth = 0;
@@ -91,7 +91,7 @@ void gaussSiedel(int iter, float *d, float *d0, float a, float dt, int b = 0)
             for (int j = 1; j <= cellResolution; j++)
             {
                 // Diffusion
-                if (b == 0)
+                if (b == 0 || true)
                 {
                     if (wall[IX(i, j)] == 1)
                     {
@@ -220,7 +220,7 @@ void project(float *u, float *v, float *p, float *div)
     }
     set_bnd(cellResolution, 0, div);
     set_bnd(cellResolution, 0, p);
-    for (k = 0; k < 100; k++)
+    for (k = 0; k < 20; k++)
     {
         for (i = 1; i <= cellResolution; i++)
         {
@@ -254,16 +254,10 @@ void drawArray(float *v, int t = 0)
             Color color = {0};
             float d = v[IX(i, j)];
 
-            // DrawText(TextFormat("I: %d J: %d", i, j), i * (screenWidth / cellResolution), j * (screenHeight / cellResolution) + 15, 10, WHITE);
-            // DrawText(TextFormat("%f", d), i * (screenWidth / cellResolution), j * (screenHeight / cellResolution), 10, WHITE);
 
             if (d > 255)
             {
                 d = 255;
-            }
-            if (d < 0.1 && d > 0)
-            {
-                color.r = 255;
             }
             if (d > 0)
             {
@@ -292,6 +286,9 @@ void drawArray(float *v, int t = 0)
                 // Draw coordinates for each cell
                 // DrawText(TextFormat("%d", i), i * (screenWidth / cellResolution), j * (screenHeight / cellResolution) + 15, 1, WHITE);
                 DrawRectangle(i * (screenWidth / cellResolution), j * (screenHeight / cellResolution), screenWidth / cellResolution, screenHeight / cellResolution, color);
+            } else if (wall[IX(i, j)] == 1){
+                Color color = {255, 0, 0, 200}; 
+                DrawRectangle(i * (screenWidth / cellResolution), j * (screenHeight / cellResolution), screenWidth / cellResolution, screenHeight / cellResolution, color);
             }
         }
     }
@@ -300,28 +297,28 @@ void drawArray(float *v, int t = 0)
 void densityStep()
 {
     // Density Steps
-    float dt = 0.0009;
-    float a = 0.001;
+    float dt = 0.001;
+    float a = 0.003;
 
     // Adding the user input from the mouse in this step, all user input is put into past density and then added to the density
     addSource(size, density, pastDensity, dt);
     swap(pastDensity, density); // Now we set pastDensity to be our main density
-    gaussSiedel(40, density, pastDensity, a, dt, 0);
+    gaussSiedel(20, density, pastDensity, a, dt, 0);
     swap(pastDensity, density); // Now we set pastDensity to be our main density
     advect(density, pastDensity, u, v, dt, 0);
 }
 
 void velocityStep()
 {
-    float dt = 0.0009;
-    float a = 0.001;
+    float dt = 0.001;
+    float a = 0.003;
     float g = 900;
 
-    // // Add gravity in a for loop
-    // for (int i = 0; i < size; i++)
-    // {
-    //     v[i] = v[i] + g * dt * dt;
-    // }
+    // Add gravity in a for loop
+    for (int i = 0; i < size; i++)
+    {
+        v[i] = v[i] + g * dt;
+    }
 
 
     addSource(size, u, u0, dt);
@@ -331,8 +328,8 @@ void velocityStep()
 
 
     // Velocity Steps for the s0mulation
-    gaussSiedel(60, v, v0, a, dt, 2);
-    gaussSiedel(60, u, u0, a, dt, 1);
+    gaussSiedel(20, v, v0, a, dt, 2);
+    gaussSiedel(20, u, u0, a, dt, 1);
 
     project(u, v, u0, v0); 
 
@@ -381,7 +378,6 @@ void drawVelocities()
 int main()
 {
 
-   
 
     // Set all boundary tiles to 1 for the wall array
     for (int row = 0; row < cellResolution + 2; row++)
@@ -390,11 +386,16 @@ int main()
         {
             if (row == 0 || row == cellResolution + 1 || col == 0 || col == cellResolution + 1)
             {
-                // wall[IX(row, col)] = 1;
+                wall[IX(row, col)] = 1;
             }
             else
             {
                 wall[IX(row, col)] = 0;
+            }
+            // Check if circle of radius 5 inside in the middle of the array
+            if (pow(row - cellResolution / 2, 2) + pow(col - cellResolution / 2, 2) < 25)
+            {
+                wall[IX(row, col)] = 1;
             }
         }
     }
@@ -457,7 +458,7 @@ int main()
 
             if (x >= 1 && x <= cellResolution && y > 0 && y <= cellResolution)
             {
-                pastDensity[IX(floor(x), floor(y))] = 300000;
+                pastDensity[IX(floor(x), floor(y))] = 4000000;
                 Vector2 mouseDelta = GetMouseDelta();
                 Vector2 mousePos = GetMousePosition();
                 Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, cam);
@@ -466,8 +467,9 @@ int main()
                 x = x / (screenWidth / cellResolution);
                 y = y / (screenHeight / cellResolution);
                 cout << mouseDelta.x << " " << mouseDelta.y << endl; 
-                u[IX(x, y)] = mouseDelta.x * 15;
-                v[IX(x, y)] = mouseDelta.y * 15;
+                // u[IX(x, y)] = mouseDelta.x * 15;
+                // v[IX(x, y)] = mouseDelta.y * 15;
+                v[IX(x, y)] = 200; 
                 // Print out the mouse position
                 DrawText(TextFormat("X: %d Y: %d", x, y), 10, 80, 20, BLUE);
             }
@@ -483,11 +485,9 @@ int main()
         // Simulation steps
 
         velocityStep();
-        // memset(v, 0, sizeof(v));
-        // memset(u, 0, sizeof(u));
-        // memset(u0, 0, sizeof(v0));
-        // memset(v0, 0, sizeof(u0));
         densityStep();
+        // memset(v, 0, sizeof(v));
+
 
         // Drawing the simulation
         BeginDrawing();
@@ -498,9 +498,9 @@ int main()
         drawArray(density);
         // Draw the velocities
 
-        for (int i = 0; i <= cellResolution+1; i++)
+        for (int i = 1; i <= cellResolution; i++)
         {
-            for (int j = 0; j <= cellResolution+1; j++)
+            for (int j = 1; j <= cellResolution; j++)
             {
                 // Draw the veolcity as a square
                 float x = i * (screenWidth / cellResolution) + (screenWidth / cellResolution) / 2;
@@ -508,13 +508,13 @@ int main()
                 float uVel = u[IX(i, j)];
                 float vVel = v[IX(i, j)];
                 float velMagnitude = sqrt(uVel * uVel + vVel * vVel);
-                if (abs(0.4 * uVel) < 1 && abs(0.4 * vVel) < 1)
+                if (abs(0.4 * uVel) < 0.01 && abs(0.4 * vVel) < 0.01)
                 {
                     // Draw vector with magnitude of one
-                    DrawLine(x, y, x + 1 * uVel / uVel, y + 0.4 * (vVel / vVel), ColorFromHSV(255, 255, 150));
+                    // DrawLine(x, y, x + 1 * uVel / uVel, y + 0.4 * (vVel / vVel), ColorFromHSV(255, 255, 150));
                 }
                 else {
-                    DrawLine(x, y, x + 0.8 * uVel, y + 0.8 * (vVel), ColorFromHSV(255, 255, 150));
+                    // DrawLine(x, y, x + 1.5 * uVel, y + 1.5 * (vVel), ColorFromHSV(255, 255, 150));
                     // DrawLine(i * (screenWidth / cellResolution) + (screenWidth / cellResolution) / 2, j * (screenHeight / cellResolution) + (screenHeight / cellResolution) / 2, i * (screenWidth / cellResolution) + (screenWidth / cellResolution) / 2 + 4 * u[IX(i, j)], j * (screenHeight / cellResolution) + (screenHeight / cellResolution) / 2 + (v[IX(i, j)]) * 4, ColorFromHSV(255, 255, 150));
                 }
             }
