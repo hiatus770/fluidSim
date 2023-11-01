@@ -2,6 +2,12 @@
 
 This is a fluid simulation that is roughly based on Jos Stam’s real time fluid dynamics for games and other research material. This project took roughly 1 month to get to where it is today, which includes research and programming. It uses a grid approach to approximate the movement of fluids and runs at a resolution of 200x200 cells. 
 
+# Gallery
+
+#### Fully working simulation displaying the density 
+https://github.com/hiatus770/fluidSim/assets/77402029/dafa6130-3d57-4d36-a1a0-5faa909635d6
+
+
 Navier Stokes Equations: 
 - Continuity Equation
 $` \nabla \cdot u = 0 `$
@@ -49,8 +55,12 @@ To linear solve all ofthese, we have a set amount of iterations and we set the i
 
 
 ### Diffusion of Densities
-![image](https://github.com/hiatus770/fluidSim/assets/77402029/0ec39728-da2f-4df9-9da3-b948d1268173)
+
 https://github.com/hiatus770/fluidSim/assets/77402029/c9ff8abc-68fa-4538-bfaf-06b86bb0147d
+
+![image](https://github.com/hiatus770/fluidSim/assets/77402029/0ec39728-da2f-4df9-9da3-b948d1268173)
+
+
 
 ## Advection
 In terms of fluids advection is import as the densities and velocities will move according to the current velocities. This algorithm is O(n) where n is the amount of cells that it traverses. 
