@@ -1,6 +1,6 @@
 # Real Time Fluid Simulation
 
-This project is an implementation of Jos Stam's real time fluid simulation for games and 
+This is a fluid simulation that is roughly based on Jos Stam’s real time fluid dynamics for games and other research material. This project took roughly 1 month to get to where it is today, which includes research and programming. It uses a grid approach to approximate the movement of fluids and runs at a resolution of 200x200 cells. 
 
 Navier Stokes Equations: 
 - Continuity Equation
