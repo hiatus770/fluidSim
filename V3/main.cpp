@@ -25,7 +25,7 @@ const int maxWidth = screenWidth;
 const int maxHeight = screenHeight;
 const int minWidth = 0;
 const int minHeight = 0;
-const int cellResolution = 100;
+const int cellResolution = 200;
 #define float double
 const float k = 0.1;
 const int size = (cellResolution + 2) * (cellResolution + 2);
@@ -469,7 +469,7 @@ int main()
                 cout << mouseDelta.x << " " << mouseDelta.y << endl; 
                 // u[IX(x, y)] = mouseDelta.x * 15;
                 // v[IX(x, y)] = mouseDelta.y * 15;
-                v[IX(x, y)] = 200; 
+                // v[IX(x, y)] = 200; 
                 // Print out the mouse position
                 DrawText(TextFormat("X: %d Y: %d", x, y), 10, 80, 20, BLUE);
             }
@@ -484,7 +484,7 @@ int main()
 
         // Simulation steps
 
-        velocityStep();
+        // velocityStep();
         densityStep();
         // memset(v, 0, sizeof(v));
 
