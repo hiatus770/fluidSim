@@ -1,5 +1,7 @@
 # Real Time Fluid Simulation
 
+This project is an implementation of Jos Stam's real time fluid simulation for games and 
+
 Navier Stokes Equations: 
 - Continuity Equation
 $` \nabla \cdot u = 0 `$
@@ -47,19 +49,19 @@ To linear solve all ofthese, we have a set amount of iterations and we set the i
 
 
 ### Diffusion of Densities
-Implemented using the gauss siedel method 
 ![image](https://github.com/hiatus770/fluidSim/assets/77402029/0ec39728-da2f-4df9-9da3-b948d1268173)
-
-
 https://github.com/hiatus770/fluidSim/assets/77402029/c9ff8abc-68fa-4538-bfaf-06b86bb0147d
-
-
 
 ## Advection
 In terms of fluids advection is import as the densities and velocities will move according to the current velocities. This algorithm is O(n) where n is the amount of cells that it traverses. 
 
 We use a semi lagrangian method to solve for the advection. We trace back in time and make the density at the current time the density at the previous time using interpolation. 
 We go back in time by using negative velcoity at certain steps until we trace back to a starting point using the time difference given. 
+![image](https://github.com/hiatus770/fluidSim/assets/77402029/2c45891c-ae41-411d-af63-7d318c1b1560)
+
+### Advection of Densities
+Implemented using semi-lagrangian backtracing 
+![image](https://github.com/hiatus770/fluidSim/assets/77402029/f1969843-e7bd-4296-baf9-dbb8646f9f7e)
 
 ## Projection
 
@@ -67,6 +69,10 @@ This is the last step, we want to get rid of divergence and curl of our velocity
 - Using hodge decomposiiton we can take any vector  field and split it by its mass conserving part and its gradient 
 - The gradient has no curl and the mass conserving part has no divergence
 - So we can subtract the divergence from the original field to get the mass conserving field of velocities
+
+![image](https://github.com/hiatus770/fluidSim/assets/77402029/6932861c-997d-4c0c-87f8-774dfff497ec)
+
+
 $$ \text{Mass Conserving Field} = \text{Initial Field} - \text{Gradient Field}$$ 
 - The gradient is the direction of steepest descent of a height field 
 - Derivative of X $` \text{Gx}[x, y] = \frac{1}{2} \cdot (x[x+1, y] - x[x-1, y]) / h `$ 
@@ -78,9 +84,3 @@ https://www.youtube.com/watch?v=x9xPX3WiK3E
 https://www.youtube.com/watch?v=iKAVRgIrUOU&ab_channel=TenMinutePhysics
 https://paveldogreat.github.io/WebGL-Fluid-Simulation/
 http://graphics.cs.cmu.edu/nsp/course/15-464/Fall09/papers/StamFluidforGames.pdf
-
-
-
-### Advection of Densities
-Implemented using semi-lagrangian backtracing 
-![image](https://github.com/hiatus770/fluidSim/assets/77402029/f1969843-e7bd-4296-baf9-dbb8646f9f7e)
