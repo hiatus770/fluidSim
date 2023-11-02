@@ -8,6 +8,10 @@ This is a fluid simulation that is roughly based on Jos Stam’s real time fluid
 https://github.com/hiatus770/fluidSim/assets/77402029/dafa6130-3d57-4d36-a1a0-5faa909635d6
 
 
+https://github.com/hiatus770/fluidSim/assets/77402029/3c902a13-eac3-4cd5-94b1-1b66d27b4f0d
+
+
+
 Navier Stokes Equations: 
 - Continuity Equation
 $` \nabla \cdot u = 0 `$
