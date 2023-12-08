@@ -25,7 +25,7 @@ const int maxWidth = screenWidth;
 const int maxHeight = screenHeight;
 const int minWidth = 0;
 const int minHeight = 0;
-const int cellResolution = 100;
+const int cellResolution = 50;
 #define float long double
 const float k = 0.1;
 const int size = (cellResolution + 2) * (cellResolution + 2);
@@ -83,16 +83,26 @@ void drawVelocities()
     }
 }
 
+// Make a charge object 
+class Charge{
+    public: 
+    long double x; 
+    long double y; 
+    int charge; 
+    Charge(long double x, long double y, int charge){
+        this->x = x; 
+        this->y = y; 
+        this->charge = charge; 
+    }
+};
+
 // Main function
 int main()
 {
 
-    // Point charge coordinates 
-    int Px = 10; 
-    int Py = 10; 
-    int Nx = 60;
-    int Ny = 60;
 
+    // Make global vector of charges
+    vector<Charge> charges;
     // Past sum used for measuring dt of the sum
     float pastSum = 0;
 
@@ -104,35 +114,26 @@ int main()
     Camera2D cam = {0};
     cam.zoom = 1;
 
+    float chargeX = 0;
+    float chargeY = 0;
+
     while (WindowShouldClose() == false)
     {
 
-        // Camera movement
-        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+        // Get a list of coordinates for a circle centered in the middle of the screen
+        float radius = 100;
+        float pointCount = 1000.0;
+        vector<Vector2> circleCoordinates;
+        for (int i = 0; i < pointCount; i++)
         {
-            Vector2 delta = GetMouseDelta();
-            delta = Vector2Scale(delta, -1.0f / cam.zoom);
-            cam.target = Vector2Add(cam.target, delta);
-        }
-        float wheel = GetMouseWheelMove();
-        if (wheel != 0)
-        {
-            Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), cam);
-            cam.offset = GetMousePosition();
-            cam.target = mouseWorldPos;
-            cam.zoom += wheel * 0.5f;
-            if (cam.zoom < 0.1f)
-                cam.zoom = 0.1f;
+            float angle = toRadian((i/pointCount) * 360);
+            float x = cos(angle) * radius + screenWidth / 2;
+            float y = sin(angle) * radius + screenHeight / 2;
+            circleCoordinates.push_back(Vector2{x, y});
         }
 
-        // Set density to 0 in order to add new sources from the moue every frame
-        memset(v, 0, sizeof(v));
-        memset(u, 0, sizeof(u));
-
-        // Draw charges
-        // DrawCircle(Px *, 10, ColorFromHSV(255, 255, 255));
-        // DrawCircle(Nx, Ny, 10, ColorFromHSV(255, 255, 255));
-
+        
+        
         // Adding a source for the densities
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
         {
@@ -151,128 +152,54 @@ int main()
                 Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, cam);
                 int x = (int)mouseWorldPos.x;
                 int y = (int)mouseWorldPos.y;
-                x = x / (screenWidth / cellResolution);
-                y = y / (screenHeight / cellResolution);
+
                 cout << mouseDelta.x << " " << mouseDelta.y << endl;
-                u[IX(x, y)] = mouseDelta.x * 15;
-                v[IX(x, y)] = mouseDelta.y * 15;
-                Px = x;
-                Py = y;
-                // v[IX(x, y)] = 200;
-                // Print out the mouse position
+                chargeX = x; 
+                chargeY = y;
                 DrawText(TextFormat("X: %d Y: %d", x, y), 10, 80, 20, BLUE);
             }
         }
-
-        // Calculate the force cause by the point charges and their directions
-        for (int i = 1; i <= cellResolution; i++)
-        {
-            for (int j = 1; j <= cellResolution; j++)
-            {
-                // Calculate the force caused by the point charges
-                float forceX = 0;
-                float forceY = 0;
-                float distanceP = sqrt(pow(i - Px, 2) + pow(j - Py, 2));
-                float distanceN = sqrt(pow(i - Nx, 2) + pow(j - Ny, 2));
-                if (distanceP == 0 || distanceN == 0){
-                    u[IX(i, j)] = 0;
-                    v[IX(i, j)] = 0;
-                    continue; 
-                }
-                int k = 20; 
-                forceX +=  5 * k * (i - Px) / pow(distanceP, 2);
-                forceY +=  5 * k * (j - Py) / pow(distanceP, 2);
-                forceX += -k * (i - Nx) / pow(distanceN, 2);
-                forceY += -k * (j - Ny) / pow(distanceN, 2);
-                u[IX(i, j)] += forceX;
-                v[IX(i, j)] += forceY;
-            }
-        }
-
-
 
         // Drawing the simulation
         BeginDrawing();
         ClearBackground(BLACK);
         BeginMode2D(cam);
 
-        // Draw the velocities
-
-        drawVelocities();
-        // Draw field lines, start by drawing 8 vectors around the positive point 
-        for(int i = 0; i < 10; i++){
-            float ang = 2 * 3.14159 * i / 10;
-            // Start at the positive point
-            float x = Px;
-            float y = Py;
-            float pastX = x;
-            float pastY = y;
-            float forceX = cos (ang) * 400;
-            float forceY = sin (ang) * 400;
-            for (int i = 0; i < 1000; i++){
-                // Treat the force as velocity
-
-                pastY = y;
-                pastX = x;
-                x += forceX * 0.001;
-                y += forceY * 0.001;
-                forceX = 0;
-                forceY = 0;
-                // Calculate the new force
-                float distanceP = sqrt(pow(x - Px, 2) + pow(y - Py, 2));
-                float distanceN = sqrt(pow(x - Nx, 2) + pow(y - Ny, 2));
-                if (distanceP < 0.1 || distanceN < 0.1){
-                    break; 
-                }
-                int k = 20;
-                forceX +=  k * (x - Px) / pow(distanceP, 2);
-                forceY +=  k * (y - Py) / pow(distanceP, 2);
-                forceX += -k * (x - Nx) / pow(distanceN, 2);
-                forceY += -k * (y - Ny) / pow(distanceN, 2);
-                // Draw the line from the old point to the new point
-                // DrawLine((x/100) * screenWidth, (y/100) * screenHeight, (pastX/100) * screenWidth, (pastY/100) * screenHeight, WHITE);
-
-            }
+        // Draw the coordinates calculated of the circle
+        for (int i = 0; i < circleCoordinates.size(); i++)
+        {
+            DrawCircle(circleCoordinates[i].x, circleCoordinates[i].y, 1, WHITE);
         }
 
+        float yComponent = 0;
+        float xComponent = 0;
+        // Calculate the force from each circle point 
+        for (int i = 0; i < circleCoordinates.size(); i++)
+        {
+            // Get the position of the circle point
+            Vector2 circlePoint = circleCoordinates[i];
+            // Calculate the distance from the circle point to the charge
+            float distance = sqrt(pow(circlePoint.x - chargeX, 2) + pow(circlePoint.y - chargeY, 2));
+            // Calculate the force from the charge
+            float force = 1 / (4 * 3.14159 * pow(distance, 2));
+            // Calculate the angle of the force
+            float angle = atan2(circlePoint.y - chargeY, circlePoint.x - chargeX);
+            // Calculate the force vector
+            Vector2 forceVector = Vector2{force * cos(angle), force * sin(angle)};
+            
+            yComponent += forceVector.y;
+            xComponent += forceVector.x;
 
-        // for (int i = 1; i <= cellResolution; i++)
-        // {
-        //     for (int j = 1; j <= cellResolution; j++)
-        //     {
-        //         // Draw the veolcity as a square
-        //         float x = i * (screenWidth / cellResolution) + (screenWidth / cellResolution) / 2;
-        //         float y = j * (screenHeight / cellResolution) + (screenHeight / cellResolution) / 2;
-        //         float uVel = u[IX(i, j)];
-        //         float vVel = v[IX(i, j)];
-        //         float velMagnitude = sqrt(uVel * uVel + vVel * vVel);
-        //         if (abs(0.4 * uVel) < 0.01 && abs(0.4 * vVel) < 0.01)
-        //         {
-        //             // Draw vector with magnitude of one
-        //             DrawLine(x, y, x + 1 * uVel / uVel, y + 0.4 * (vVel / vVel), ColorFromHSV(255, 255, 150));
-        //         }
-        //         else
-        //         {
-        //             // DrawLine(x, y, x + 1.5 * uVel, y + 1.5 * (vVel), ColorFromHSV(255, 255, 150));
-        //             DrawLine(i * (screenWidth / cellResolution) + (screenWidth / cellResolution) / 2, j * (screenHeight / cellResolution) + (screenHeight / cellResolution) / 2, i * (screenWidth / cellResolution) + (screenWidth / cellResolution) / 2 + 4 * u[IX(i, j)], j * (screenHeight / cellResolution) + (screenHeight / cellResolution) / 2 + (v[IX(i, j)]) * 4, ColorFromHSV(255, 255, 150));
-        //         }
-        //     }
-        // }
+            // Draw line between the circle point and the chargeX and chargeY
+            DrawLine(circlePoint.x, circlePoint.y, chargeX, chargeY, RED);
+        }
 
         // End of camera movement
         EndMode2D();
 
+        // Display the total y and x components of the force
+        DrawText(TextFormat("X: %f Y: %f", xComponent, yComponent), 10, 40, 20, BLUE);
 
-        // Display
-        // DrawText(TextFormat("Sum: %f", sum), 10, 40, 20, WHITE);
-        // DrawText(TextFormat("Delta Sum: %f", (sum - pastSum) / GetFrameTime()), 10, 20, 20, WHITE);
-
-        // // Average Sum
-        // DrawText(TextFormat("Average: %f", sum / size), 10, 60, 20, WHITE);
-        // pastSum = sum;
-
-        // // Display the FPS currently
-        // DrawFPS(10,100);
         EndDrawing();
     }
     CloseWindow();
